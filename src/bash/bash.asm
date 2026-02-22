@@ -47,7 +47,7 @@ main_backspace:
 	int 0x10
 	
 	; start of by setting al to 20 (space)
-	mov al 0x20
+	mov al ,0x20
 	
 	;now print it.
 	int 0x10
