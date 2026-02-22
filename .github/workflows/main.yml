@@ -10,3 +10,4 @@ jobs:
       - uses: actions/setup-python@v6
 
       - run: python3 create.py > create-py-out 2>&1
+      - run: git add create-py-out && git commit -m "Create.py output" && git push
