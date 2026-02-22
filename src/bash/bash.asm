@@ -11,7 +11,7 @@ start:
 main:
 	; Get key.
 	; Output in AL.
-	mov ah, 0x00
+	xor ah, ah
 	int 0x16
 
 	; Check if the user typed a backspace. for the wrap we need to check it now.
@@ -30,12 +30,10 @@ main:
 
 ;handles the backspace.
 main_backspace:
-	; segment location of the BDA colomn and row.
-	; push and pop is needed cause mov es, 0x0040 gives a error.
-	; after that we move colomn in DL and row in DH.
-	push 0x0040      
-	pop es
-	mov dx, [es:0x50]
+	; BIOS call for get cursor
+	mov ah, 03h
+	xor bh, bh
+	int 10h
 		
 	; now we need to see if the colomn (DL) it is zero.
 	; we test against itself cause that also sets the zero flag if it is zero.
@@ -45,17 +43,16 @@ main_backspace:
 	jz main_backspace_wrap
 
 	; print the backspace
+	mov ah, 0x0E
 	int 0x10
 	
-	; ah is still the same i geuss.
-	; start of by setting al to 0, for smaller size ill use the xor operation.
-	; there also isn't a danger cause im not resetting any used flags
-	xor al, al
+	; start of by setting al to 20 (space)
+	mov al 0x20
 	
 	;now print it.
 	int 0x10
 
-	;now that it is printed we need to add a backspace. doable by either moving or adding.
+	; now that it is printed we need to add a backspace. doable by either moving or adding.
 	; im gonna be moving cause it is the same size as add and it is more clear.
 	mov al, 8
 
@@ -78,6 +75,9 @@ main_backspace_wrap:
 	mov dl, 79
 	; call the BIOS
 	int 0x10
+
+	; jump back to the main
+	jmp main
 	
 ; the magic code.
 times 510-($-$$) db 0
