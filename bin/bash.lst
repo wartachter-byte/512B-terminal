@@ -54,26 +54,24 @@
     54                                  	; print the backspace
     55 00000023 CD10                    	int 0x10
     56                                  	
-    57                                  	; ah is still the same i geuss.
-    58                                  	; start of by setting al to 0, for smaller size ill use the xor operation.
-    59                                  	; there also isn't a danger cause im not resetting any used flags
-    60 00000025 30C0                    	xor al, al
-    61                                  	
-    62                                  	;now print it.
-    63 00000027 CD10                    	int 0x10
-    64                                  
-    65                                  	;now that it is printed we need to add a backspace. doable by either moving or adding.
-    66                                  	; im gonna be moving cause it is the same size as add and it is more clear.
-    67 00000029 B008                    	mov al, 8
-    68                                  
-    69                                  	;now print the backspace.
-    70 0000002B CD10                    	int 0x10
-    71                                  
-    72                                  	
-    73                                  	;and now go back to the main loop.
-    74 0000002D EBEB                    	jmp main_resume_b
-    75                                  
-    76                                  	
-    77                                  ; the magic code.
-    78 0000002F 00<rep 1CFh>            times 510-($-$$) db 0
-    79 000001FE 55AA                    dw 0xaa55
+    57                                  	; ah is still the same.
+    58                                  	; move a space to al
+    59 00000025 B020                    	mov al, ' '
+    60                                  	
+    61                                  	;now print it.
+    62 00000027 CD10                    	int 0x10
+    63                                  
+    64                                  	; now that it is printed we need to add a backspace
+    65 00000029 B008                    	mov al, 8
+    66                                  
+    67                                  	;now print the backspace.
+    68 0000002B CD10                    	int 0x10
+    69                                  
+    70                                  	
+    71                                  	;and now go back to the main loop.
+    72 0000002D EBEB                    	jmp main_resume_b
+    73                                  
+    74                                  	
+    75                                  ; the magic code.
+    76 0000002F 00<rep 1CFh>            times 510-($-$$) db 0
+    77 000001FE 55AA                    dw 0xaa55
