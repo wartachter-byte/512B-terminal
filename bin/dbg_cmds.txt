@@ -1,0 +1,4 @@
+pb 0x7c00
+pb 0x7c0c
+watch write 0x7d00
+c

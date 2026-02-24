@@ -25,53 +25,58 @@
     25                                  	; Check if the user typed a backspace
     26 00000010 3C08                    	cmp al,8
     27 00000012 740C                    	je main_backspace
-    28                                  main_resume_a:
-    29                                  	; check offset of buffer against 63
-    30 00000014 83FF3F                  	cmp di, 63
-    31                                  	; if bigger or eqaul. so beyond buffer or at the end of it, go back to the main and dont print anything
-    32 00000017 73F3                    	jae main
-    33                                  
-    34                                  	; store the currently typed byte
-    35 00000019 AA                      	stosb
-    36                                  
-    37                                  main_resume_b:
-    38                                  	; Print key.
-    39                                  	; Input in AL which lines uo with the Get Key output.
-    40 0000001A B40E                    	mov ah, 0x0e
-    41 0000001C CD10                    	int 0x10
-    42                                  
-    43                                  	
-    44                                  
-    45                                  	; Jump back for the loop.
-    46 0000001E EBEC                    	jmp main
-    47                                  
-    48                                  ;handles the backspace.
-    49                                  main_backspace:
-    50                                  	; move the buffer pointer back 1
-    51 00000020 4F                      	dec di
-    52                                  	; for print
-    53 00000021 B40E                    	mov ah, 0x0e
-    54                                  	; print the backspace
-    55 00000023 CD10                    	int 0x10
+    28                                  	
+    29                                  main_resume_a:
+    30                                  	; check offset of buffer against 63
+    31 00000014 83FF3F                  	cmp di, 63
+    32                                  	; if bigger or eqaul. so beyond buffer or at the end of it, go back to the main and dont print anything
+    33 00000017 73F3                    	jae main
+    34                                  
+    35                                  	; store the currently typed byte
+    36 00000019 AA                      	stosb
+    37                                  
+    38                                  main_resume_b:
+    39                                  	; Print key.
+    40                                  	; Input in AL which lines uo with the Get Key output.
+    41 0000001A B40E                    	mov ah, 0x0e
+    42 0000001C CD10                    	int 0x10
+    43                                  
+    44                                  	
+    45                                  
+    46                                  	; Jump back for the loop.
+    47 0000001E EBEC                    	jmp main
+    48                                  
+    49                                  ;handles the backspace.
+    50                                  main_backspace:
+    51                                  
+    52                                  	; is the buffer empty?
+    53                                  	; if so: just go back
+    54 00000020 85FF                    	test di, di
+    55 00000022 74E8                    	jz main
     56                                  	
-    57                                  	; ah is still the same.
-    58                                  	; move a space to al
-    59 00000025 B020                    	mov al, ' '
-    60                                  	
-    61                                  	;now print it.
-    62 00000027 CD10                    	int 0x10
-    63                                  
-    64                                  	; now that it is printed we need to add a backspace
-    65 00000029 B008                    	mov al, 8
-    66                                  
-    67                                  	;now print the backspace.
-    68 0000002B CD10                    	int 0x10
-    69                                  
-    70                                  	
-    71                                  	;and now go back to the main loop.
-    72 0000002D EBEB                    	jmp main_resume_b
-    73                                  
-    74                                  	
-    75                                  ; the magic code.
-    76 0000002F 00<rep 1CFh>            times 510-($-$$) db 0
-    77 000001FE 55AA                    dw 0xaa55
+    57                                  
+    58                                  	; move the buffer pointer back 1
+    59 00000024 4F                      	dec di
+    60                                  	; for print
+    61 00000025 B40E                    	mov ah, 0x0e
+    62                                  	; print the backspace
+    63 00000027 CD10                    	int 0x10
+    64                                  	
+    65                                  	; ah is still the same.
+    66                                  	; move a space to al
+    67 00000029 B020                    	mov al, ' '
+    68                                  	
+    69                                  	;now print it.
+    70 0000002B CD10                    	int 0x10
+    71                                  
+    72                                  	; now that it is printed we need to add a backspace
+    73 0000002D B008                    	mov al, 8
+    74                                  
+    75                                  	
+    76                                  	;and now go back to the main loop.
+    77 0000002F EBE9                    	jmp main_resume_b
+    78                                  
+    79                                  	
+    80                                  ; the magic code.
+    81 00000031 00<rep 1CDh>            times 510-($-$$) db 0
+    82 000001FE 55AA                    dw 0xaa55
