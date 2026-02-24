@@ -1,0 +1,79 @@
+     1                                  org 0x7c00
+     2                                  bits 16
+     3                                  
+     4                                  ; start code for confirmation
+     5                                  start:
+     6 00000000 B40E                    	mov ah, 0x0E   ; Teletype mode
+     7 00000002 B03E                    	mov al, '>'    ; Een prompt teken
+     8 00000004 CD10                    	int 0x10       ; Print het
+     9                                  
+    10                                  	; the buffer is after our code so on 0x07d00
+    11                                  	; segment = 0x07dxx >>> 0x07d0
+    12                                  	; offset = 0, just do xor di, di
+    13 00000006 68D007                  	push 0x07d0
+    14 00000009 07                      	pop es
+    15 0000000A 31FF                    	xor di, di
+    16                                  
+    17                                  ;main loop.
+    18                                  main:
+    19                                  	; Get key.
+    20                                  	; Output in AL.
+    21 0000000C B400                    	mov ah, 0x00
+    22 0000000E CD16                    	int 0x16
+    23                                  
+    24                                  	
+    25                                  	; Check if the user typed a backspace
+    26 00000010 3C08                    	cmp al,8
+    27 00000012 740C                    	je main_backspace
+    28                                  main_resume_a:
+    29                                  	; check offset of buffer against 63
+    30 00000014 83FF3F                  	cmp di, 63
+    31                                  	; if bigger or eqaul. so beyond buffer or at the end of it, go back to the main and dont print anything
+    32 00000017 73F3                    	jae main
+    33                                  
+    34                                  	; store the currently typed byte
+    35 00000019 AA                      	stosb
+    36                                  
+    37                                  main_resume_b:
+    38                                  	; Print key.
+    39                                  	; Input in AL which lines uo with the Get Key output.
+    40 0000001A B40E                    	mov ah, 0x0e
+    41 0000001C CD10                    	int 0x10
+    42                                  
+    43                                  	
+    44                                  
+    45                                  	; Jump back for the loop.
+    46 0000001E EBEC                    	jmp main
+    47                                  
+    48                                  ;handles the backspace.
+    49                                  main_backspace:
+    50                                  	; move the buffer pointer back 1
+    51 00000020 4F                      	dec di
+    52                                  	; for print
+    53 00000021 B40E                    	mov ah, 0x0e
+    54                                  	; print the backspace
+    55 00000023 CD10                    	int 0x10
+    56                                  	
+    57                                  	; ah is still the same i geuss.
+    58                                  	; start of by setting al to 0, for smaller size ill use the xor operation.
+    59                                  	; there also isn't a danger cause im not resetting any used flags
+    60 00000025 30C0                    	xor al, al
+    61                                  	
+    62                                  	;now print it.
+    63 00000027 CD10                    	int 0x10
+    64                                  
+    65                                  	;now that it is printed we need to add a backspace. doable by either moving or adding.
+    66                                  	; im gonna be moving cause it is the same size as add and it is more clear.
+    67 00000029 B008                    	mov al, 8
+    68                                  
+    69                                  	;now print the backspace.
+    70 0000002B CD10                    	int 0x10
+    71                                  
+    72                                  	
+    73                                  	;and now go back to the main loop.
+    74 0000002D EBEB                    	jmp main_resume_b
+    75                                  
+    76                                  	
+    77                                  ; the magic code.
+    78 0000002F 00<rep 1CFh>            times 510-($-$$) db 0
+    79 000001FE 55AA                    dw 0xaa55
