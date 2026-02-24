@@ -54,16 +54,14 @@ main_backspace:
 	; print the backspace
 	int 0x10
 	
-	; ah is still the same i geuss.
-	; start of by setting al to 0, for smaller size ill use the xor operation.
-	; there also isn't a danger cause im not resetting any used flags
-	xor al, al
+	; ah is still the same.
+	; move a space to al
+	mov al, ' '
 	
 	;now print it.
 	int 0x10
 
-	;now that it is printed we need to add a backspace. doable by either moving or adding.
-	; im gonna be moving cause it is the same size as add and it is more clear.
+	; now that it is printed we need to add a backspace
 	mov al, 8
 
 	;now print the backspace.
