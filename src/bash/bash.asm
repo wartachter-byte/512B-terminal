@@ -25,6 +25,7 @@ main:
 	; Check if the user typed a backspace
 	cmp al,8
 	je main_backspace
+	
 main_resume_a:
 	; check offset of buffer against 63
 	cmp di, 63
@@ -47,6 +48,13 @@ main_resume_b:
 
 ;handles the backspace.
 main_backspace:
+
+	; is the buffer empty?
+	; if so: just go back
+	test di, di
+	jz main
+	
+
 	; move the buffer pointer back 1
 	dec di
 	; for print
@@ -63,9 +71,6 @@ main_backspace:
 
 	; now that it is printed we need to add a backspace
 	mov al, 8
-
-	;now print the backspace.
-	int 0x10
 
 	
 	;and now go back to the main loop.
