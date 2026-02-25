@@ -1,3 +1,3 @@
 #!/bin/bash
 
-bochs -f bochsrun.txt -q
+qemu-system-x86_64 -drive format=raw,file=bash.img

@@ -3,10 +3,19 @@ bits 16
 
 ; start code for confirmation
 start:
-	mov ah, 0x0E   ; Teletype mode
-	mov al, '>'    ; Een prompt teken
-	int 0x10       ; Print het
-
+	; clears the screen by resetting the videomode. causes flicker, but its smaller
+	; ah=00h videomode set al=03h, standard videomode
+	mov ax, 0003h
+	int 0x10
+	
+	; prints '> ' for confirmation
+	
+	mov ah, 0x0E
+	mov al, '>'
+	int 0x10
+	mov al, ' '
+	int 0x10
+	
 	; the buffer is after our code so on 0x07d00
 	; segment = 0x07dxx >>> 0x07d0
 	; offset = 0, just do xor di, di
@@ -25,6 +34,7 @@ main:
 	; Check if the user typed a backspace
 	cmp al,8
 	je main_backspace
+
 	
 main_resume_a:
 	; check offset of buffer against 63
