@@ -1,1 +1,3 @@
-bochs -f bochsrc.txt -rc dbg_cmds.txt
+#!/bin/bash
+
+bochs -f bochsrun.txt -q
