@@ -12,12 +12,18 @@ start:
 	; also this is at the start cause dl wil contain the boot drive ID
 	; and idk what all these BIOS calls after this do to dl
 	; and we modify di later on to
-	push dx
+	mov [boot_drive], dl
 
 	; clears the screen by resetting the videomode. causes flicker, but its smaller
 	; ah=00h videomode set al=03h, standard videomode
 	mov ax, 0003h
 	int 0x10
+
+	; load the 2 sectors following us. ax = 1, cl = 2, es:bx = 0x0000:0x7e40
+	mov ax, 1
+	mov cl, 2
+	mov bx, 0x7e40
+	call load
 	
 	; prints '> ' for confirmation
 	
@@ -80,51 +86,80 @@ run:
 ; 	es:bx - Where to put
 ; out:
 ; 	Putted on memory
-.load:
-	; Using the LBA_to_CHS function, i need to preserve some registers.
-	; Mainly: cx and bx
-	; As these registers are modified
-	; Also we want to modify no primary registers.
+load:
+	; i want to store the regs passed in so that we dont have any problem
+	; Start
 	pusha
 
-	; So now need to calculate.
-	; The BIOS could fail and i don't want to uselessly recalculate.
-	; So we are gonna calculate and then store the result.
-	; except, the calculation modifies a lot.
-	; So il just set it up once and then store it.
-
+	; Now i want to calculate the CHS.
+	; I dont want to recalculate everytime, so im just gonna store it.
+	; Also save some important regs that will be modified
 	push cx
 	push bx
-	push es
-	call .load_convert
-	pop es
+	; Now call the conversion
+	call load_convert
+	; Now restore the values into their respective locations (BX, AX (because BIOS))
 	pop bx
 	pop ax
-	mov ah, 02h
-	pusha
-	push es
-	mov si, 3
-	
-.load_loop:
-	int 13h
-	jnc .load_succes
 
+	; now for some final thingy's:
+	; BIOS call
+	mov ah, 02h
+	; 3 times
+	mov si, 3
+
+	; and then store it
+	pusha
+	; Also push ES beacuse it is not included in pusha but still vital
+	push es
+
+	; now we are ready
+load_loop:
+	; clear the carry flag for the BIOS
+	clc
+	; now call the BIOS
+	int 13h
+	; did smth went wrong?
+	jc load_fail
+ 	; no?:
+
+	; Remove the last setup and restore the regs to before the call
 	pop es
 	popa
-
-	xor ax, ax
-	int 13h
-
-	dec si
-	jnz .load_loop
-
-	jmp .load_fail
-
-.load_succes:
+	
+	; End
 	popa
 	ret
 
-.load_fail:
+load_fail:
+	; reset the drive controller
+	; ah = 00h
+	xor ah, ah
+	; int 13h
+	int 13h
+
+	; Get the stored setup
+	pop es
+	popa
+
+
+	; Now decrement SI for the 3 times
+	dec si
+	; now store the setup again
+	pusha
+	push es
+	
+	; Is it not yet zero??
+	test si, si
+	; if so: go back to the loop with the correct things.
+	jnz load_loop
+
+	; here it is zero:
+	; Remove the last setup and restore the regs to before the call
+	pop es
+	popa
+	
+	; End
 	popa
 	ret
 	
@@ -140,7 +175,7 @@ run:
 ; 	dl - drive number
 ; modifications:
 ; 	ax, bx, cx, dx
-.load_convert:
+load_convert:
 	; Sector   = (LBA % SPT) + 1
 	; Head 	   = (LBA / SPT) % NOH
 	; Cylinder = (LBA / SPT) / NOH
@@ -176,17 +211,19 @@ run:
 	; Get the sector. It is in CL now, which is perfect.
 	pop cx
 	; Get the drive number. It now is in BL. Im storing it in BX because the head is in DX
-	pop bx
-	; Also save it again.
-	push bx
+	mov bl, [boot_drive]
 
 	; Now we can do the mov operations.
-	; Move the Head to DH
+	; Move the Head to DH; Loads a sector using LBA
+	
 	mov dh, dl
 	; Move the drive-number to dl
 	mov dl, bl
 	; Move the Cylinder to CH
 	mov ch, al
+
+	; return!!!!!!!!
+	ret
 	
 ; just handels the buffers
 ; modify's di, ah and al
@@ -220,6 +257,7 @@ main_backspace:
 	;and now go back to the main loop.
 	jmp main_resume
 
+boot_drive: db 0
 
 ; the magic code.
 times 510-($-$$) db 0
