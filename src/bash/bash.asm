@@ -25,14 +25,6 @@ start:
 	mov bx, 0x7e40
 	call load
 	
-	; prints '> ' for confirmation
-	
-	mov ah, 0x0E
-	mov al, '>'
-	int 0x10
-	mov al, ' '
-	int 0x10
-	
 	; the buffer is after our code so on 0x07d00
 	; segment = 0x07dxx >>> 0x07d0
 	; offset = 0, just do xor di, di
@@ -40,7 +32,14 @@ start:
 	pop es
 	xor di, di
 
-	
+common_start:
+	; prints '> '
+		
+	mov ah, 0x0E
+	mov al, '>'
+	int 0x10
+	mov al, ' '
+	int 0x10	
 
 ;main loop.
 main:
@@ -54,6 +53,8 @@ main:
 	cmp al,8
 	je main_backspace
 
+	; Check if the user pressed enter
+	; Also i litteraly forgot i already implented this for a moment
 	cmp al, 13
 	je run
 
@@ -77,7 +78,22 @@ main_resume:
 	jmp main
 
 run:
-	; pass
+	; The run command is gonna follow a trie loaded at the start.
+	; The trie operates like this:
+	; Byte 1: the character to check with
+	; Byte 2-3: The pointer to where
+	; if Byte 1 is a null it means that this defines the end of this layer.
+	; So if we can't find one, we simply go back to the common_start and move all again
+	; Now if we find one that points to a null and the current value is a space, then we must load the
+	; pointer of that thing, because that pointer has the location.
+
+	; Plan: Move back the buffer thing, loop: [load, check and keep track of correct]
+
+	; move the buffer back to the front which is just setting the offset to zero as the offset
+	; is mainly used
+	xor di, di
+	; Now for the loop
+	
 
 ; Loads a sector using LBA
 ; in:
@@ -86,10 +102,13 @@ run:
 ; 	es:bx - Where to put
 ; out:
 ; 	Putted on memory
+; modifications:
+; 	None
 load:
 	; i want to store the regs passed in so that we dont have any problem
 	; Start
 	pusha
+	push es
 
 	; Now i want to calculate the CHS.
 	; I dont want to recalculate everytime, so im just gonna store it.
@@ -123,13 +142,7 @@ load_loop:
 	jc load_fail
  	; no?:
 
-	; Remove the last setup and restore the regs to before the call
-	pop es
-	popa
-	
-	; End
-	popa
-	ret
+	jmp load_complete
 
 load_fail:
 	; reset the drive controller
@@ -155,11 +168,13 @@ load_fail:
 	jnz load_loop
 
 	; here it is zero:
+load_complete:
 	; Remove the last setup and restore the regs to before the call
 	pop es
 	popa
 	
 	; End
+	pop es
 	popa
 	ret
 	
