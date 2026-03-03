@@ -91,10 +91,68 @@ run:
 
 	; move the buffer back to the front which is just setting the offset to zero as the offset
 	; is mainly used
+	; Also the offset is SI for lodsb and the segment DS
+	; now we need (DI >> SI and ES >> DS)
+	mov si, di
+	mov ds, es
+	; we can now use some other registers that we will need.
+	; we will now use ES:DI as our trie pointer
+	; ES >> 0x07e4	DI >> 0x0000
+	; set ES
+	push 0x07e4
+	pop es
+	; Clear DI
 	xor di, di
-	; Now for the loop
-	
 
+	; Now that the setup is complete we can start.
+	; we will need to do losb and then compare against the [ES:DI]
+	; If it is not correct we dill inc di (if [ES:DI] is zero then we will go to run_z) and try again
+	; Exception: If AL is 0x20 and [ES:DI] is zero, then we found the last pointer.
+
+run_loop:
+	; load the first byte into AL
+	lodsb
+	
+run_subloop:
+	; Now compare it.
+	cmp al, [es:di]
+	; not eqaul? try again
+	jne run_retry
+	; is eqaul? go to the next item
+; useless label
+run_next:
+	; for the next item, we must get the pntr. it will be loaded in little-endian
+	; so the trie stores it in little-endian to countercat this.
+	; now it will be based of 0x0000 and so we can use ES:BX
+	; But to laod it quick, i can use DI to store it in, instanlty loading it
+	mov di, [es:di]
+	; we just loaded so we can just jump back
+	jmp run_loop
+
+run_retry:
+	; add DI 3 for the next item
+	add di, 3
+	; Is it zero?
+	test di, di
+	; if so > run_z
+	jz run_z
+	; If not: go back to try again
+	jmp run_subloop
+
+run_z:
+	; is AL space (0x20)?
+	cmp al, 0x20
+	; if it is space: jmp to run_load
+	je run_load
+	; if not: we failed
+	jmp run_fail
+
+run_load:
+	; loads it
+
+run_fail:
+	; if it fails.
+	
 ; Loads a sector using LBA
 ; in:
 ; 	ax - Sector
