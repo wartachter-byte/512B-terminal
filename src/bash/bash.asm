@@ -33,14 +33,10 @@ start:
 	xor di, di
 
 common_start:
-	; prints '> '
-		
-	mov ah, 0x0E
-	mov al, '>'
-	int 0x10
-	mov al, ' '
-	int 0x10	
-
+	; prints '> '	
+	mov si, msg_start
+	call echo
+	
 ;main loop.
 main:
 	; Get key.
@@ -72,9 +68,29 @@ main_resume:
 	mov ah, 0x0e
 	int 0x10
 
-	
-
 	; Jump back for the loop.
+	jmp main
+
+; just handels the buffers
+; modify's di, ah and al
+; di - buffer offset
+main_backspace:
+
+	; is the buffer empty?
+	; if so: just go back
+	test di, di
+	jz main
+	
+	; move the buffer pointer back 1
+	dec di
+	; call the echo command for printing
+	; SI is gonna get the pointer to msg_backspace
+	mov si, msg_backspace
+	; call it
+	call echo
+
+	
+	;and now go back to the main loop.
 	jmp main
 
 run:
@@ -94,7 +110,8 @@ run:
 	; Also the offset is SI for lodsb and the segment DS
 	; now we need (DI >> SI and ES >> DS)
 	mov si, di
-	mov ds, es
+	push es
+	pop ds
 	; we can now use some other registers that we will need.
 	; we will now use ES:DI as our trie pointer
 	; ES >> 0x07e4	DI >> 0x0000
@@ -122,9 +139,11 @@ run_subloop:
 ; useless label
 run_next:
 	; for the next item, we must get the pntr. it will be loaded in little-endian
-	; so the trie stores it in little-endian to countercat this.
+	; so the trie stores it in little-endian to counteract this.
 	; now it will be based of 0x0000 and so we can use ES:BX
 	; But to laod it quick, i can use DI to store it in, instanlty loading it
+	; Also DI must be inc first to load the right spot
+	inc di
 	mov di, [es:di]
 	; we just loaded so we can just jump back
 	jmp run_loop
@@ -148,11 +167,33 @@ run_z:
 	jmp run_fail
 
 run_load:
-	; loads it
+	; we are currently at ES:DI and this is the spot where we are.
+	; So we need to get ES:DI + 1 actually
+	inc di
+	mov ax, [es:di]
+	; 1 sector
+	mov cl, 1
+	; we are gonna need to put it at 0x7E40 + 1024
+	; 512 = 0x100, 1024 = 0x200
+	; 0x7E40 + 0x0200 = 0x8140
+	; clear es
+	push 0
+	pop es
+	; put value in BX
+	mov bx, 0x8140
+	; load it
+	call load
+	; jmp back
+	jmp common_start
 
 run_fail:
-	; if it fails.
-	
+	; Im just gonna print a error msg ("Unkown command!")
+	; call the echo command with msg_unkcom
+	mov si, msg_unkcom
+	call echo
+	; jmp bacl
+	jmp common_start
+
 ; Loads a sector using LBA
 ; in:
 ; 	ax - Sector
@@ -297,41 +338,60 @@ load_convert:
 
 	; return!!!!!!!!
 	ret
-	
-; just handels the buffers
-; modify's di, ah and al
-; di - buffer offset
-main_backspace:
 
-	; is the buffer empty?
-	; if so: just go back
-	test di, di
-	jz main
-	
-
-	; move the buffer pointer back 1
-	dec di
-	; for print
+; Prints a string till it hits a null.
+; in:
+; 	00:SI 	- string pointer
+; out:
+; 	None
+; modifications:
+; 	None
+echo:
+	; AL used to compare
+	; So im gonna store it all
+	push ds
+	push ax
+	; clear DS
+	push 0
+	pop ds
+	; Move 0x0E to AH
 	mov ah, 0x0e
-	; print the backspace
-	int 0x10
-	
-	; ah is still the same.
-	; move a space to al
-	mov al, ' '
-	
-	;now print it.
-	int 0x10
+	; Done with the setup
 
-	; now that it is printed we need to add a backspace
-	mov al, 8
+; Now i need to do it
+echo_loop:
+	; Get the byte
+	lodsb
+	; Is it null: > echo_stop
+	test al, al
+	jz echo_stop
+	; It is not null
+	; so we print it
+	int 10h
+	; now return for the loop
+	jmp echo_loop
 
+echo_stop:
+	; End
+	pop ax
+	pop ds
+	ret
 	
-	;and now go back to the main loop.
-	jmp main_resume
 
 boot_drive: db 0
+msg_backspace: db 8, ' ', 8, 0
+msg_start: db '> ', 0
+msg_unkcom: db 13, 10, 'Unkown command!', 13, 10, 0
 
-; the magic code.
-times 510-($-$$) db 0
+; the magic code + PNTR lib
+times 506-($-$$) db 0
+; pntr lib
+; 2 + 2 bytes = 4 bytes
+; 510 - 4 = 506
+; load 
+dw load
+; echo
+dw echo
+
+; the magic code
 dw 0xaa55

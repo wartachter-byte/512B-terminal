@@ -22,7 +22,7 @@ else
 fi
 
 if [ "$(stat -c %Y src/bash/bash.asm)" != "$(cat tls/bash.asm.timestamp 2>/dev/null)" ]; then
-    nasm src/bash/bash.asm -o bin/bash.img
+    nasm src/bash/bash.asm -o bin/bash.img -l bin/bash.lst
     
     stat -c %Y src/bash/bash.asm > tls/bash.asm.timestamp
 fi
