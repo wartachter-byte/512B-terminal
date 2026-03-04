@@ -1,34 +1,48 @@
 #!/bin/bash
 
-if [ ! -f ./tls/create.c ]; then
-    echo -e "\e[31mERROR: create.c was not found.\e[0m"
-    exit 1
-fi
+# 1. Bootloader/Bash build
+nasm src/bash/bash.asm -o bin/bash.img
 
-if [ ! -f ./src/bash/bash.asm ]; then
-    echo -e "\e[31mERROR: bash.asm was not found.\e[0m"
-    exit 1
-fi
+# 2. Compileer Apps en verzamel offsets
+# We reserveren sector 1-2 (1024 bytes) voor de app_header. Apps starten op sector 3.
+CURRENT_SECTOR=3
+OFFSETS_FILE="./tls/app_offsets.txt"
+> $OFFSETS_FILE # Maak leeg
 
-
-if [ "$(stat -c %Y tls/create.c)" != "$(cat tls/create.c.timestamp 2>/dev/null)" ]; then
-    gcc tls/create.c -o tls/create
-    succes=$?
+for app_src in ./src/apps/*; do
+    [ -e "$app_src" ] || continue
+    app_name=$(basename "$app_src")
     
-    echo $succes > tls/create.c.succes
-    stat -c %Y tls/create.c > tls/create.c.timestamp
-else
-    succes=$(cat tls/create.c.succes 2>/dev/null)
-fi
-
-if [ "$(stat -c %Y src/bash/bash.asm)" != "$(cat tls/bash.asm.timestamp 2>/dev/null)" ]; then
-    nasm src/bash/bash.asm -o bin/bash.img -l bin/bash.lst
+    # Assembleer app
+    nasm "$app_src" -o "bin/$app_name.bin"
     
-    stat -c %Y src/bash/bash.asm > tls/bash.asm.timestamp
-fi
+    # Sla offset op voor create.c: "appname:sector"
+    echo "$app_name:$CURRENT_SECTOR" >> $OFFSETS_FILE
+    
+    # Bereken volgende sector (size / 512, naar boven afgerond)
+    size=$(stat -c%s "bin/$app_name.bin")
+    num_sectors=$(( (size + 511) / 512 ))
+    CURRENT_SECTOR=$(( CURRENT_SECTOR + num_sectors ))
+done
 
-if [ "$succes" = "0" ]; then
-    ./tls/create
-    truncate -s %512 bin/app_header
-    cat bin/app_header >> bin/bash.img
-fi
+# 3. Genereer de Trie (create.c moet nu app_offsets.txt inlezen)
+gcc tls/create.c -o tls/create
+./tls/create
+
+# 4. Image samenstellen
+# Zorg dat de header exact 1024 bytes (2 sectoren) is
+truncate -s 1024 bin/app_header
+
+# Plak header achter de bootloader (sector 1 & 2)
+dd if=bin/app_header of=bin/bash.img bs=512 seek=1 conv=notrunc
+
+# Plak alle apps erachteraan vanaf sector 3
+CUR_APP_SECTOR=3
+for app_src in ./src/apps/*; do
+    app_name=$(basename "$app_src")
+    dd if="bin/$app_name.bin" of=bin/bash.img bs=512 seek=$CUR_APP_SECTOR conv=notrunc
+    
+    size=$(stat -c%s "bin/$app_name.bin")
+    num_sectors=$(( (size + 511) / 512 ))
+    CUR_APP_SECTOR=$(( CUR_APP_SECTOR + num_sectors ))
+done

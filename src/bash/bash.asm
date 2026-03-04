@@ -1,3 +1,4 @@
+
 org 0x7c00
 bits 16
 
@@ -32,6 +33,10 @@ start:
 	pop es
 	xor di, di
 
+	; print version
+	mov si, msg_vers
+	call echo
+	
 common_start:
 	; prints '> '	
 	mov si, msg_start
@@ -89,9 +94,9 @@ main_backspace:
 	; call it
 	call echo
 
+	jmp main
 	
 	;and now go back to the main loop.
-	jmp main
 
 run:
 	; The run command is gonna follow a trie loaded at the start.
@@ -380,7 +385,8 @@ echo_stop:
 
 boot_drive: db 0
 msg_backspace: db 8, ' ', 8, 0
-msg_start: db '> ', 0
+msg_start: db  '> ', 0
+msg_vers: db '512B-terminal - V0', 13, 10, 13, 10, 0
 msg_unkcom: db 13, 10, 'Unkown command!', 13, 10, 0
 
 ; the magic code + PNTR lib
