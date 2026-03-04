@@ -1,0 +1,5 @@
+; 0x7dfc
+main:
+	mov si, msg_working
+	call [0x7dfc]
+msg_working: db 'Its working!', 13, 10, 0

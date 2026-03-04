@@ -121,10 +121,10 @@ run:
 	; we will now use ES:DI as our trie pointer
 	; ES >> 0x07e4	DI >> 0x0000
 	; set ES
-	push 0x07e4
+	push 0
 	pop es
 	; Clear DI
-	xor di, di
+	mov di, 0x7e40
 
 	; Now that the setup is complete we can start.
 	; we will need to do losb and then compare against the [ES:DI]
@@ -150,7 +150,7 @@ run_next:
 	; Also DI must be inc first to load the right spot
 	inc di
 	mov di, [es:di]
-	; we just loaded so we can just jump back
+ 	; we just loaded so we can just jump back
 	jmp run_loop
 
 run_retry:
