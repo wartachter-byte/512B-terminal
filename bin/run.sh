@@ -1,3 +1,3 @@
 #!/bin/bash
 
-qemu-system-x86_64 -drive format=raw,file=bash.img
+qemu-system-x86_64 -drive format=raw,file=terminal.img

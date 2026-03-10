@@ -38,6 +38,8 @@ start:
 	call echo
 	
 common_start:
+	; reset buffer offset for a new command
+	xor di, di
 	; prints '> '	
 	mov si, msg_start
 	call echo
@@ -110,11 +112,10 @@ run:
 
 	; Plan: Move back the buffer thing, loop: [load, check and keep track of correct]
 
-	; move the buffer back to the front which is just setting the offset to zero as the offset
-	; is mainly used
+	; move the buffer pointer back to the start so lodsb walks the typed command
 	; Also the offset is SI for lodsb and the segment DS
 	; now we need (DI >> SI and ES >> DS)
-	mov si, di
+	xor si, si
 	push es
 	pop ds
 	; we can now use some other registers that we will need.
@@ -156,10 +157,10 @@ run_next:
 run_retry:
 	; add DI 3 for the next item
 	add di, 3
-	; Is it zero?
-	test di, di
+	; Is this the end-of-layer marker (char == 0)?
+	cmp byte [es:di], 0
 	; if so > run_z
-	jz run_z
+	je run_z
 	; If not: go back to try again
 	jmp run_subloop
 
@@ -167,6 +168,9 @@ run_z:
 	; is AL space (0x20)?
 	cmp al, 0x20
 	; if it is space: jmp to run_load
+	je run_load
+	; also accept string end (0) so enter without trailing space works
+	test al, al
 	je run_load
 	; if not: we failed
 	jmp run_fail
@@ -387,7 +391,7 @@ boot_drive: db 0
 msg_backspace: db 8, ' ', 8, 0
 msg_start: db  '> ', 0
 msg_vers: db '512B-terminal - V0', 13, 10, 13, 10, 0
-msg_unkcom: db 13, 10, 'Unkown command!', 13, 10, 0
+msg_unkcom: db 13, 10, 'Unknown command!', 13, 10, 0
 
 ; the magic code + PNTR lib
 times 506-($-$$) db 0
